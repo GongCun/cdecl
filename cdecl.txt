@@ -1,0 +1,7 @@
+unsigned int (*func)(char *ch, int), a;
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg);
+void (*signal(int sig, void (*func)(int)))(int), (*func)(int, char *);
+int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void));
+char * const (*(* const bar)[5])(int x), * const str
+void pthread_cleanup_push(void (*routine)(void *), void *routine_arg)
+int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime), (*func)(int)
