@@ -23,8 +23,7 @@ A description of the grammar is the following:
      
 ````
 
-Usage
-======
+##Usage##
 ``bash
 \# Normal usage
 $ echo 'void (*signal(int sig, void (*func)(int)))(int)' | \
