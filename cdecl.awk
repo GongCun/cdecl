@@ -208,15 +208,15 @@ BEGIN {
 		} else if (ARGV[i] != "-") {
 			TYPEFILE = ARGV[i]
 			while ((getline < TYPEFILE) > 0) {
-                for (k=1; k<=NF; k++)
-                    spec_array[++j] = $k # "struct name"
-            }
+                		for (k=1; k<=NF; k++)
+                    		spec_array[++j] = $k # "struct name"
+            		}
 			delete ARGV[i]
 		}
 	}
-    if (DEBUG)
-        for (idx in spec_array)
-            print spec_array[idx]
+	if (DEBUG)
+        	for (idx in spec_array)
+            		print spec_array[idx]
 }
 
 
