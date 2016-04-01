@@ -77,7 +77,6 @@ function gettoken(  ch) {
         while ((ch = substr(str, i++, 1)) != "]")
             token = token ch
         token = token ch
-        
         tokentype = "BRACKETS"
         if (DEBUG) printf(">>> token = %s; tokentype = %s <<<\n", token, tokentype)
         return tokentype
@@ -85,15 +84,13 @@ function gettoken(  ch) {
         while ((ch = substr(str, i++, 1)) ~ /[0-9a-zA-Z_\-]/)
             token = token ch
         i--
-
         tokentype = "NAME"
         if (DEBUG) printf(">>> token = %s; tokentype = %s <<<\n", token, tokentype)
         return tokentype
     } else
-
         tokentype = token
-        if (DEBUG) printf(">>> token = %s; tokentype = %s <<<\n", token, tokentype)
-        return tokentype
+    if (DEBUG) printf(">>> token = %s; tokentype = %s <<<\n", token, tokentype)
+    return tokentype
 }
 
 function dcl(  temp, stack, top) {
