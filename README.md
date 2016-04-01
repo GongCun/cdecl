@@ -23,7 +23,8 @@ A description of the grammar is the following:
      
 ````
 
-## Usage ##
+Usage
+======
 ```bash
 # Normal usage
 $ echo 'void (*signal(int sig, void (*func)(int)))(int)' | \
@@ -51,3 +52,9 @@ $ echo 'char * const (*(* const bar)[5])(int x), * const str' | \
 License
 =======
 The project is licensed under MIT. See [LICENSE](/LICENSE) file for the full license. 
+
+THANKS
+======
+Thanks to git@github.com:m-pilia/cdecl and http://cdecl.org for
+providing their programs to help verify.
+
