@@ -209,7 +209,7 @@ BEGIN {
 			TYPEFILE = ARGV[i]
 			while ((getline < TYPEFILE) > 0) {
                 for (k=1; k<=NF; k++)
-				    spec_array[++j] = $k # "struct name"
+                    spec_array[++j] = $k # "struct name"
             }
 			delete ARGV[i]
 		}
