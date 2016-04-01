@@ -25,11 +25,11 @@ A description of the grammar is the following:
 
 ## Usage ##
 ```bash
-\# Normal usage
+# Normal usage
 $ echo 'void (*signal(int sig, void (*func)(int)))(int)' | \
     awk -f ./cdecl.awk -
 
-\# Add the special type in the type.txt (or any other file name)
+# Add the special type in the type.txt (or any other file name)
 $ cat ./type.txt
 sighandler_t
 pthread_t
@@ -38,10 +38,12 @@ pthread_cond_t
 pthread_mutex_t
 struct timespec
 
-$ echo 'int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg)' | \
+$ echo 'int pthread_create(pthread_t *thread, \
+    const pthread_attr_t *attr, \
+    void *(*start_routine) (void *), void *arg)' | \
     awk -f ./cdecl.awk ./type.txt -
 
-\# Debug
+# Debug
 $ echo 'char * const (*(* const bar)[5])(int x), * const str' | \
     awk -f ./cdecl.awk -- -d -
 ```
