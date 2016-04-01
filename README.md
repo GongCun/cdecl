@@ -23,8 +23,8 @@ A description of the grammar is the following:
      
 ````
 
-##Usage##
-``bash
+## Usage ##
+```bash
 \# Normal usage
 $ echo 'void (*signal(int sig, void (*func)(int)))(int)' | \
     awk -f ./cdecl.awk -
@@ -44,7 +44,7 @@ $ echo 'int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *
 \# Debug
 $ echo 'char * const (*(* const bar)[5])(int x), * const str' | \
     awk -f ./cdecl.awk -- -d -
-``
+```
 
 License
 =======
