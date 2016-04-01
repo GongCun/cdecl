@@ -101,9 +101,9 @@ function dcl(  temp, stack, top) {
     while (top > 0) {
     	if ((temp = stack[top--]) == "*")
     		out = out "pointer to "
-		else
-			out = out temp " "
-	}
+	else
+		out = out temp " "
+    }
 }
 
 function dirdcl(  type) {
