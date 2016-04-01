@@ -1,4 +1,54 @@
 #!/usr/bin/env awk -f
+#
+# The MIT License (MIT)
+# 
+# Copyright (c) 2016 Gong Cun <gong_cun@bocmacau.com>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+#==============================================================================
+#
+# This program expand the C declaration parser at the end of Chapter 5 in K&R's
+# The C Programming Language, with function argument types, qualifiers like
+# const, and so on.
+# 
+# Reference The C Answer Book, Second Edition, by Colvis L. Tondo and
+# Scott E. Gimpel (Pearson Education), 0-13-109653-2 
+#
+# A description of the grammar is the following:
+#
+#   dcl:        optional *'s direct-dcl
+#               optional qualifiers's direct-dcl
+#
+#   direct-dcl: name
+#               (dcl)
+#               direct-dcl(optional parm-dcl)
+#               direct-dcl[optional size]
+#
+#   parm-dcl:   parm-dcl, dcl-spec dcl
+#
+#   dcl-spec:   type-spec dcl-spec
+#               type-qual dcl-spec
+#
+#==============================================================================
+      
 
 #-+- Global variable -+-
 # str, token, tokentype, out, datatype, i, name \
@@ -159,7 +209,7 @@ BEGIN {
 			TYPEFILE = ARGV[i]
 			while ((getline < TYPEFILE) > 0) {
                 for (k=1; k<=NF; k++)
-				    spec_array[++j] = $k
+				    spec_array[++j] = $k # "struct name"
             }
 			delete ARGV[i]
 		}
