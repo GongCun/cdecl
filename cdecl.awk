@@ -1,238 +1,156 @@
-#!/usr/bin/env awk -f
-#
-# The MIT License (MIT)
-# 
-# Copyright (c) 2016 Gong Cun <gong_cun@bocmacau.com>
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
+#!/usr/bin/env gawk -f
 
-#==============================================================================
-#
-# This program expand the C declaration parser at the end of Chapter 5 in K&R's
-# The C Programming Language, with function argument types, qualifiers like
-# const, and so on.
-# 
-# Reference The C Answer Book, Second Edition, by Colvis L. Tondo and
-# Scott E. Gimpel (Pearson Education), 0-13-109653-2 
-#
-# A description of the grammar is the following:
-#
-#   dcl:        optional *'s direct-dcl
-#               optional qualifiers's direct-dcl
-#
-#   direct-dcl: name
-#               (dcl)
-#               direct-dcl(optional parm-dcl)
-#               direct-dcl[optional size]
-#
-#   parm-dcl:   parm-dcl, dcl-spec dcl
-#
-#   dcl-spec:   type-spec dcl-spec
-#               type-qual dcl-spec
-#
-#==============================================================================
-      
+# must use gawk
 
-#-+- Global variable -+-
-# str, token, tokentype, out, datatype, i, name \
-# prevtoken, i, j, k
-
-function gettoken(  ch) {
-    if (prevtoken == "YES") {
-        prevtoken = "NO"
-        return tokentype
+function classify_string() {
+    if (this["string"] == "const") {
+        this["string"] = "read-only"
+        return "QUALIFIER"
     }
-    while ((token = substr(str,i++,1)) == " ")
+    if (this["string"] == "volatile") 
+        return "QUALIFIER"
+    if (this["string"] == "void")
+        return "TYPE"
+    if (this["string"] == "char")
+        return "TYPE"
+    if (this["string"] == "signed")
+        return "TYPE"
+    if (this["string"] == "unsigned")
+        return "TYPE"
+    if (this["string"] == "short")
+        return "TYPE"
+    if (this["string"] == "int")
+        return "TYPE"
+    if (this["string"] == "long")
+        return "TYPE"
+    if (this["string"] == "float")
+        return "TYPE"
+    if (this["string"] == "double")
+        return "TYPE"
+    if (this["string"] == "struct")
+        return "TYPE"
+    if (this["string"] == "union")
+        return "TYPE"
+    if (this["string"] == "enum")
+        return "TYPE"
+
+    return "IDENTIFIER"
+
+}
+
+function gettoken(  str,ch) {
+    while ((this["string"] = substr(str,i++,1)) == " ")
         ;
-    if (token == "(") {
-        if ((ch = substr(str,i++,1)) == ")") {
-            token == "()"
-            tokentype = "PARENS"
-            if (DEBUG) printf(">>> token = %s; tokentype = %s <<<\n", token, tokentype)
-            return tokentype
-        } else {
-            i--;
-            tokentype = "("
-            if (DEBUG) printf(">>> token = %s; tokentype = %s <<<\n", token, tokentype)
-            return tokentype
-        }
-    } else if (token == "[") {
-        while ((ch = substr(str, i++, 1)) != "]")
-            token = token ch
-        token = token ch
-        tokentype = "BRACKETS"
-        if (DEBUG) printf(">>> token = %s; tokentype = %s <<<\n", token, tokentype)
-        return tokentype
-    } else if (token ~ /[0-9a-zA-Z_\-]/) {
-        while ((ch = substr(str, i++, 1)) ~ /[0-9a-zA-Z_\-]/)
-            token = token ch
+    if (this["string"] ~ /[0-9a-zA-Z_\-]/) {
+        while ((ch = substr(str,i++,1)) ~ /[0-9a-zA-Z_\-]/)
+            this["string"] = this["string"] ch
         i--
-        tokentype = "NAME"
-        if (DEBUG) printf(">>> token = %s; tokentype = %s <<<\n", token, tokentype)
-        return tokentype
-    } else
-        tokentype = token
-    if (DEBUG) printf(">>> token = %s; tokentype = %s <<<\n", token, tokentype)
-    return tokentype
+        this["type"] = classify_string()
+        if (DEBUG) printf("\ntoken = %s; tokentype = %s\n", this["string"], this["type"]);
+        return
+    }
+    this["type"] = this["string"]
+    if (DEBUG) printf("\ntoken = %s; tokentype = %s\n", this["string"], this["type"]);
+    return
 }
 
-function dcl(  temp, stack, top) {
-    if (DEBUG) print ">>> in dcl() <<<"
-    for ( ; gettoken() == "*" || tokenqual() == "YES"; )
-    	stack[++top] = token # start from 1
-    dirdcl()
-    while (top > 0) {
-    	if ((temp = stack[top--]) == "*")
-    		out = out "pointer to "
-	else
-		out = out temp " "
+function push() {
+    top++ # begin from 1
+    stack[top, "string"] = this["string"]
+    stack[top, "type"] = this["type"]
+}
+
+function pop() {
+    top--
+}
+
+function initialize(  str) {
+    gettoken(str)
+    while (this["type"] != "IDENTIFIER") {
+        push()
+        gettoken(str) # exception not handle
+    }
+    printf("%s is ", this["string"]);
+    gettoken(str)
+    nextstate = "get_array"
+}
+
+function get_array( str) {
+    nextstate = "get_params"
+    while (this["string"] == "[") {
+        printf("array ")
+        gettoken(str) # a number or ']'
+        if (this["string"] ~ /^[0-9]+$/) {
+            printf("0..%d ", this["string"])
+            gettoken(str) # read the ']'
+        }
+        gettoken(str) # read the next past the ']'
+        printf("of ")
+        nextstate = "get_lparen"
     }
 }
 
-function dirdcl(  type) {
-    if (DEBUG) print ">>> in dirdcl() <<<"
-    if (tokentype == "(") { # (dcl)
-        dcl()
-        if (tokentype != ")")
-            printf("error: missing )\n")
-    } else if (tokentype == "NAME") {
-        if (length(name) == 0)
-            name = token
+function get_params( str) {
+    nextstate = "get_lparen"
+    if (this["type"] == "(") {
+        while (this["type"] != ")")
+            gettoken(str)
+        gettoken(str)
+        printf("function returning ")
     }
-    else if (length(name) != 0)
-        prevtoken = "YES"
-    else
-        printf("error: expected name or (dcl)\n");
+}
 
-    while ((type = gettoken()) == "PARENS" || type == "BRACKETS" || type == "(") {
-        if (type == "PARENS")
-            out = out "function returning "
-        else if (type == "BRACKETS")
-            out = out "array" token " of "
-        else {
-            out = out "function ("
-            parmdcl()
-            out = out ") returning "
+function get_lparen( str) {
+    nextstate = "get_ptr_part"
+    if (top >= 1) {
+        if (stack[top, "type"] == "(") {
+            pop()
+            gettoken(str) # read past ')'
+            nextstate = "get_array"
         }
     }
 }
 
-function conn_blank(  str, element) {
-    if (length(str) == 0)
-        return str = element
-    else
-        return str = str " " element
+function get_ptr_part( str) {
+    nextstate = "get_type"
+    if(stack[top, "type"] == "*") {
+        printf("pointer to ")
+        pop()
+        nextstate = "get_lparen"
+    } else if (stack[top, "type"] == "QUALIFIER") {
+        printf("%s ", stack[top--, "string"])
+        nextstate = "get_lparen"
+    }
 }
 
-function parmdcl() {
-    if (DEBUG) print ">>> in parmdcl() <<<"
-    do {
-        dclspec()
-    } while (tokentype == ",")
-    if (tokentype != ")")
-        printf("error: missing )\n")
-}
 
-function dclspec(  temp) {
-   if (DEBUG) print ">>> in dclspec() <<<"
-   gettoken()
-   do { 
-        for ( ; tokenspec() == "YES" || tokenqual() == "YES"; gettoken() )
-            temp = conn_blank(temp, token)
-        prevtoken = "YES"
-        dcl()
-    } while (length(tokentype) > 0 && tokentype != "," && tokentype != ")")
-    out = out temp
-    if (tokentype == ",")
-        out = out ", "
-}
-
-function tokenspec() {
-	for (idx in spec_array) {
-		if (token == spec_array[idx])
-			return "YES"
-	}
-	return "NO"
-}
-
-function tokenqual() {
-    if (token == "const" || token == "volatile") 
-        return "YES"
-    else
-        return "NO"
-}
-
-#-+- No use, but for future extention -+-
-function tokenstorage() {
-	if (token == "static" || token == "auto" || \
-		token == "register" || token == "extern" || token == "typedef")
-		return "YES"
-	else
-		return "NO"
+function get_type( str) {
+    nextstate = "NULL"
+    while (top >= 1)
+        printf("%s ", stack[top--, "string"])
+    printf("\n")
 }
 
 BEGIN {
-	spec_array[++j] = "char"
-	spec_array[++j] = "int"
-	spec_array[++j] = "void"
-	spec_array[++j] = "short"
-	spec_array[++j] = "long"
-	spec_array[++j] = "float"
-	spec_array[++j] = "double"
-	spec_array[++j] = "signed"
-	spec_array[++j] = "unsigned"
-	for (i=1; i<ARGC; i++) {
-		if (ARGV[i] == "-d") {
-			DEBUG = 1
-			delete ARGV[i]
-		} else if (ARGV[i] != "-") {
-			TYPEFILE = ARGV[i]
-			while ((getline < TYPEFILE) > 0) {
-                		for (k=1; k<=NF; k++)
-                    		spec_array[++j] = $k # "struct name"
-            		}
-			delete ARGV[i]
-		}
-	}
-	if (DEBUG)
-        	for (idx in spec_array)
-            		print spec_array[idx]
-}
-
-
-$0 !~ /^$/ && $0 !~ /^#/ {
-    i = 1; k = 0
-    datatype = ""; str = $0
-    print ">>> " str
-    do {
-        out = ""; prevtoken = "NO"; name = ""
-        if (k++ == 0) {
-            gettoken();
-            for ( ; tokenspec() == "YES" || tokenqual() == "YES"; gettoken() )
-                datatype = conn_blank(datatype, token)
-            prevtoken = "YES"
+    for (i=1; i<ARGC; i++) {
+        if (ARGV[i] == "-d") {
+            DEBUG = 1
+            delete ARGV[i]
+        } else if (ARGV[i] != "-") {
+            TYPEFILE = ARGV[i]
+            while ((getline < TYPEFILE) > 0) {
+                for (k=1; k<=NF; k++)
+                    spec_array[++j] = $k # "struct name"
+            }
+            delete ARGV[i]
         }
-        dcl()
-        printf("%s: %s%s\n", name, out, datatype)
-    } while (tokentype == ",")
+    }
+    i = 1
 }
 
 
-
+{
+    nextstate = "initialize"
+    while (nextstate != "NULL")
+        @nextstate($0)
+}
