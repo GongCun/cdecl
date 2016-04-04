@@ -1,6 +1,38 @@
 #!/usr/bin/env gawk -f
+#
+# The MIT License (MIT)
+# 
+# Copyright (c) 2016 Gong Cun <gong_cun@bocmacau.com>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
 
-# must use gawk
+
+#=============================================================================
+#
+#  Implemented as an FSM reference to "Expert C Programming" book,
+#  expand to handle declarations with function argument types.
+#
+#  Must use the Indirect Function Calls of gawk-specific extension.
+#
+#=============================================================================
+
 
 function classify_string() {
     if (this["string"] == "const") {
@@ -33,12 +65,20 @@ function classify_string() {
         return "TYPE"
     if (this["string"] == "enum")
         return "TYPE"
+    for (idx in spec_array)
+        if(this["string"] ==spec_array[idx])
+            return "TYPE"
 
     return "IDENTIFIER"
 
 }
 
-function gettoken(  str,ch) {
+#-+- str is global variable (euqal to $0) -+-
+function gettoken(  ch) {
+    if (prevtoken == "YES") {
+        prevtoken = "NO"
+        return
+    }
     while ((this["string"] = substr(str,i++,1)) == " ")
         ;
     if (this["string"] ~ /[0-9a-zA-Z_\-]/) {
@@ -49,86 +89,131 @@ function gettoken(  str,ch) {
         if (DEBUG) printf("\ntoken = %s; tokentype = %s\n", this["string"], this["type"]);
         return
     }
+    if (this["string"] == "(") {
+        if (substr(str, i++, 1) == ")") {
+            this["string"] = "()"
+            this["type"] = "PARENS"
+            if (DEBUG) printf("\ntoken = %s; tokentype = %s\n", this["string"], this["type"]);
+            return
+        } else
+            i--;
+    }
     this["type"] = this["string"]
     if (DEBUG) printf("\ntoken = %s; tokentype = %s\n", this["string"], this["type"]);
     return
 }
 
-function push() {
-    top++ # begin from 1
-    stack[top, "string"] = this["string"]
-    stack[top, "type"] = this["type"]
+#-+- function can change the value of val["top"] -+-
+function push(  stack, val) {
+    val["top"]++ # begin from 1
+    stack[val["top"], "string"] = this["string"]
+    stack[val["top"], "type"] = this["type"]
 }
 
-function pop() {
-    top--
-}
-
-function initialize(  str) {
-    gettoken(str)
-    while (this["type"] != "IDENTIFIER") {
-        push()
-        gettoken(str) # exception not handle
-    }
-    printf("%s is ", this["string"]);
-    gettoken(str)
+function initialize(stack, val) {
+    dclex(stack, val)
+    gettoken()
     nextstate = "get_array"
 }
 
-function get_array( str) {
+function dclex(stack, val) {
+    gettoken()
+    for (; this["type"] == "*" || this["type"] == "TYPE" || \
+            this["type"] == "QUALIFIER"; gettoken())
+        push(stack, val)
+    dclname(stack, val)
+}
+
+function dclname(stack, val) {
+    if (this["type"] == "(") {
+        push(stack, val)
+        dclex(stack, val)
+    } else if (this["type"] == "IDENTIFIER") {
+        if (length(name) == 0) name = this["string"]
+        printf("%s: ", this["string"])
+    }
+    else if (length(name) != 0)
+        prevtoken = "YES"
+    else
+        printf(">>> error: missing name\n")
+}
+
+function get_array(stack, val) {
     nextstate = "get_params"
     while (this["string"] == "[") {
         printf("array ")
-        gettoken(str) # a number or ']'
+        gettoken() # a number or ']'
         if (this["string"] ~ /^[0-9]+$/) {
-            printf("0..%d ", this["string"])
-            gettoken(str) # read the ']'
+            printf("0..%d ", this["string"]-1)
+            gettoken() # read the ']'
         }
-        gettoken(str) # read the next past the ']'
+        gettoken() # read the next past the ']'
         printf("of ")
         nextstate = "get_lparen"
     }
 }
 
-function get_params( str) {
+function get_params(stack, val) {
     nextstate = "get_lparen"
-    if (this["type"] == "(") {
-        while (this["type"] != ")")
-            gettoken(str)
-        gettoken(str)
+    if (this["type"] == "PARENS") {
+        gettoken()
         printf("function returning ")
+    } else if (this["type"] == "(") {
+        printf("function (")
+        parmdcl()
+        nextstate = "get_lparen"
+        printf(") returning ")
+        gettoken()
     }
 }
 
-function get_lparen( str) {
+function get_lparen(stack, val) {
     nextstate = "get_ptr_part"
-    if (top >= 1) {
-        if (stack[top, "type"] == "(") {
-            pop()
-            gettoken(str) # read past ')'
+    if (val["top"] >= 1) {
+        if (stack[val["top"], "type"] == "(") {
+            val["top"]--
+            gettoken() # read past ')'
             nextstate = "get_array"
         }
     }
 }
 
-function get_ptr_part( str) {
+function get_ptr_part(stack, val) {
     nextstate = "get_type"
-    if(stack[top, "type"] == "*") {
+    if(stack[val["top"], "type"] == "*") {
         printf("pointer to ")
-        pop()
+        val["top"]--
         nextstate = "get_lparen"
-    } else if (stack[top, "type"] == "QUALIFIER") {
-        printf("%s ", stack[top--, "string"])
+    } else if (stack[val["top"], "type"] == "QUALIFIER") {
+        printf("%s ", stack[val["top"]--, "string"])
         nextstate = "get_lparen"
     }
 }
 
 
-function get_type( str) {
+function get_type(stack, val) {
     nextstate = "NULL"
-    while (top >= 1)
-        printf("%s ", stack[top--, "string"])
-    printf("\n")
+    for (k = 1; k <= val["top"]; k++)
+        printf("%s%s", stack[k, "string"],
+               k == val["top"] ? "" : " ")
+}
+
+function dcl(  stack, val) {
+    nextstate = "initialize"
+    while (nextstate != "NULL") {
+        if (DEBUG) printf("\n>>> call %s() <<<\n", nextstate);
+        @nextstate(stack, val)
+    }
+}
+
+function parmdcl() {
+    do {
+        dcl()
+        if (this["type"] == ",")
+            printf(", ")
+    } while (this["type"] == ",")
+    if (this["type"] != ")")
+        printf(">>> error: missing )\n")
 }
 
 BEGIN {
@@ -145,12 +230,12 @@ BEGIN {
             delete ARGV[i]
         }
     }
-    i = 1
 }
 
-
 {
-    nextstate = "initialize"
-    while (nextstate != "NULL")
-        @nextstate($0)
+    i = 1; prevtoken = "NO"; name = ""
+    str = $0
+    print ">>> " str
+    dcl()
+    printf("\n");
 }
