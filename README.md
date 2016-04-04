@@ -1,27 +1,9 @@
 cdecl.awk - C declaration parser by Awk
 =========================================
-
-This simple program expand the C declaration parser at the end of Chapter 5 in K&R's 
-<i>The C Programming Language</i>, and reference
-<i>The C Answer Book</i>,
-Second Edition, by Colvis L. Tondo and Scott E. Gimpel.
-
-A description of the grammar is the following:
-````{.bnf}
-        dcl:        optional *'s direct-dcl
-                    optional qualifiers's direct-dcl
-
-        direct-dcl: name
-                    (dcl)
-                    direct-dcl(optional parm-dcl)
-                    direct-dcl[optional size]
-
-        parm-dcl:   parm-dcl, dcl-spec dcl
-
-        dcl-spec:   type-spec dcl-spec
-                    type-qual dcl-spec
-     
-````
+The branch fsm implemented the parser as an FSM reference to
+<i>Expert C Programming</i>,
+expand with function argument types and adjust the order of type
+declarations.
 
 Usage
 ======
