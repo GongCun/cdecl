@@ -5,3 +5,4 @@ int pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(vo
 char * const (*(* const bar)[5])(int x), * const str
 void pthread_cleanup_push(void (*routine)(void *), void *routine_arg)
 int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime), (*func)(int)
+char *(*c[10])(int **p)
