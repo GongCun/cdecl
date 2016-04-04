@@ -23,6 +23,11 @@ A description of the grammar is the following:
      
 ````
 
+The branch fsm implemented the parser as an FSM reference to
+<i>Expert C Programming</i>,
+expand with function argument types and adjust the order of type
+declarations.
+
 Usage
 ======
 ```bash
